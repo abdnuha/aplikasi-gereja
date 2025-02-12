@@ -344,6 +344,8 @@ class MemberManagementApp(tk.Tk):
         self.create_widgets()
 
     def create_widgets(self):
+        tk.Label(self, text="[Church Name] Member Management", font=("Arial", 16, "bold")).pack(pady=10)
+
         stats = self.db.get_member_stats()
         member_count = stats[0]
         last_update = stats[1] if stats[1] else "N/A"
