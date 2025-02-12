@@ -67,6 +67,11 @@ class DatabaseHandler:
             messagebox.showerror("Database Error", str(e))
             return False
 
+    def get_member_stats(self):
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT COUNT(*), MAX(date_joined) FROM member")
+        return cursor.fetchone()
+
 class BaseForm(tk.Toplevel):
     def __init__(self, parent, title):
         super().__init__(parent)
@@ -339,6 +344,13 @@ class MemberManagementApp(tk.Tk):
         self.create_widgets()
 
     def create_widgets(self):
+        stats = self.db.get_member_stats()
+        member_count = stats[0]
+        last_update = stats[1] if stats[1] else "N/A"
+
+        tk.Label(self, text=f"Total Members: {member_count}").pack(pady=5)
+        tk.Label(self, text=f"Last Update: {last_update}").pack(pady=5)
+
         tk.Button(self, text="Add Member", command=self.open_add_form, 
                  width=20, height=2).pack(pady=10)
         tk.Button(self, text="List Members", command=self.open_list_view, 
