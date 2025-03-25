@@ -1,76 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from tkcalendar import DateEntry
-import sqlite3
-import re
 from PIL import Image, ImageTk
-
-class DatabaseHandler:
-    def __init__(self):
-        self.conn = sqlite3.connect('members.db')
-        self.create_tables()
-
-    def create_tables(self):
-        cursor = self.conn.cursor()
-        cursor.execute('''CREATE TABLE IF NOT EXISTS member (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        full_name TEXT NOT NULL,
-                        first_name TEXT NOT NULL,
-                        last_name TEXT NOT NULL,
-                        address TEXT NOT NULL,
-                        phone_number TEXT NOT NULL,
-                        dob TEXT NOT NULL,
-                        date_joined TEXT NOT NULL,
-                        date_exit TEXT,
-                        photo TEXT)''')
-        self.conn.commit()
-
-    def get_member(self, member_id):
-        cursor = self.conn.cursor()
-        cursor.execute("SELECT * FROM member WHERE id = ?", (member_id,))
-        return cursor.fetchone()
-
-    def search_members(self, search_term=None):
-        cursor = self.conn.cursor()
-        if search_term:
-            cursor.execute("""SELECT id, full_name, first_name, last_name 
-                            FROM member 
-                            WHERE full_name LIKE ?""", (f'%{search_term}%',))
-        else:
-            cursor.execute("SELECT id, full_name, first_name, last_name FROM member")
-        return cursor.fetchall()
-
-    def get_all_members(self):
-        cursor = self.conn.cursor()
-        cursor.execute("SELECT full_name, date_joined, date_exit FROM member")
-        return cursor.fetchall()
-
-    def save_member(self, data, member_id=None):
-        try:
-            cursor = self.conn.cursor()
-            if member_id:  
-                cursor.execute("""UPDATE member SET
-                                full_name=?, first_name=?, last_name=?, 
-                                address=?, phone_number=?, dob=?, 
-                                date_joined=?, date_exit=?, photo=?
-                                WHERE id=?""", 
-                             (*data.values(), member_id))
-            else:  
-                cursor.execute("""INSERT INTO member 
-                                (full_name, first_name, last_name, address, 
-                                phone_number, dob, date_joined, date_exit, photo)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", 
-                             tuple(data.values()))
-            self.conn.commit()
-            return True
-        except sqlite3.Error as e:
-            messagebox.showerror("Database Error", str(e))
-            return False
-
-    def get_member_stats(self):
-        cursor = self.conn.cursor()
-        cursor.execute("SELECT COUNT(*), MAX(date_joined) FROM member")
-        return cursor.fetchone()
+from backend import DatabaseHandler  
+import re  
 
 class BaseForm(tk.Toplevel):
     def __init__(self, parent, title):
@@ -123,34 +56,32 @@ class MemberForm(BaseForm):
         self.fields = {}
         labels = ['Full Name', 'First Name', 'Last Name', 'Address', 'Phone Number']
         
-       
         for i, label in enumerate(labels):
             tk.Label(self, text=label).grid(row=i, column=0, padx=10, pady=5, sticky='e')
             entry = tk.Entry(self, width=30)
             entry.grid(row=i, column=1, padx=10, pady=5)
             self.fields[label.lower().replace(' ', '_')] = entry
 
-        
-        self.dob_picker = DatePicker(self, "Date of Birth")
-        self.dob_picker.grid(row=0, column=2, padx=10, pady=5, sticky='w')
-        
-        self.joined_picker = DatePicker(self, "Date Joined")
-        self.joined_picker.grid(row=1, column=2, padx=10, pady=5, sticky='w')
-        
-        self.exit_picker = DatePicker(self, "Date Exit")
-        self.exit_picker.grid(row=2, column=2, padx=10, pady=5, sticky='w')
+        date_frame = tk.Frame(self)
+        date_frame.grid(row=0, column=2, rowspan=3, padx=10, pady=5, sticky='w')
 
+        self.dob_picker = DatePicker(date_frame, "Date of Birth")
+        self.dob_picker.pack(anchor='w', pady=5)
+
+        self.joined_picker = DatePicker(date_frame, "Date Joined")
+        self.joined_picker.pack(anchor='w', pady=5)
+
+        self.exit_picker = DatePicker(date_frame, "Date Exit")
+        self.exit_picker.pack(anchor='w', pady=5)
 
         self.photo_path = tk.StringVar()
         tk.Label(self, text="Photo").grid(row=5, column=0, padx=10, pady=5, sticky='e')
         tk.Entry(self, textvariable=self.photo_path, width=30).grid(row=5, column=1, padx=10, pady=5)
         tk.Button(self, text="Upload", command=self.upload_photo).grid(row=5, column=2, padx=10, pady=5)
 
-        
         tk.Button(self, text="Save", command=self.on_save).grid(row=6, column=1, pady=10)
         tk.Button(self, text="Cancel", command=self.destroy).grid(row=6, column=2, pady=10)
 
-        
         if self.member_id:
             self.load_data()
 
@@ -298,8 +229,6 @@ class MemberDetails(BaseForm):
                 pass
 
         tk.Button(self, text="Close", command=self.destroy).grid(row=8, column=1, pady=10)
-
-
 
 class AdminLogin(tk.Toplevel):
     def __init__(self, parent):
